@@ -1,6 +1,6 @@
 # Phiếu C · Sự cố và quyết định v2 · Khối 3 (phút 125–200)
 
-**Bàn:** ______ · **Thẻ đã bốc:** ___ *(để trống tới phút 125; bốc số xong thì ghi đúng số đó, ví dụ `S3`. Lab Coach đối chiếu với sổ; lệnh tự kiểm tra in dòng này trong report.)*
+**Bàn:** `K5-L3A-DAY10-Pinky-PoCtoPilotGate1` · **Thẻ đã bốc:** `S6` *(để trống tới phút 125; bốc số xong thì ghi đúng số đó, ví dụ `S3`. Lab Coach đối chiếu với sổ; lệnh tự kiểm tra in dòng này trong report.)*
 
 Mở `incidents/Sx/card.md` của đúng số đã bốc. Các bước trên thẻ trỏ về đúng mục trong phiếu này. Mục C3 chỉ điền phần ứng với
 số thẻ của bàn; các phần khác để trống.
@@ -30,7 +30,7 @@ Mỗi lệnh `lab10.eval` và `lab10.grade` tự ghi một dòng vào `runs/jour
 
 | # | Mã lần chạy | Bộ ticket · mốc | Đổi MỘT thứ gì so với lần trước | pass_rate (khoảng tin cậy 95%) | pass_k | Hoàn sai (đ) · lỗi hãng oan · lộ dữ liệu | Tỉ lệ chuyển người | Kết luận (một câu) |
 |---|---|---|---|---|---|---|---|---|
-| 1 | | Sx · prepared | nhận thẻ đã bốc, chưa sửa thêm (đúng cổng vòng 1 đã chốt) | | | | | |
+| 1 | `R-S6-prepared-20261118-163650-c285d0` | `S6 · prepared` | nhận thẻ đã bốc, chưa sửa thêm (đúng cổng vòng 1 đã chốt) | `0.3333` (`[0.0833, 0.5833]`) | `0.3333` | `270.000đ · 25 · 0` | `0.25` | Chặn được `15` lỗi oan (`40 → 25`) khi `parcels[0]` thiếu `delay_cause`, nhưng vẫn còn `270.000đ` hoàn sai, `25` lỗi oan và `ROI = -0.09 < 0.25`. |
 | 2 | | Sx · after | | | | | | |
 | 3 | | Sx · after | | | | | | |
 | 4 | | base · after | (kiểm không regression) | | | | | |
@@ -47,19 +47,22 @@ Chạy **trước khi sửa bất cứ thứ gì**:
 python3 -m lab10.grade --incident Sx
 ```
 
-- Mã lần chạy grade: `__________` · base: `__________` · prepared: `__________`
-- Cổng vòng 1 đỡ được ô / con số nào (so cột base với cột prepared): …
-- Khối kinh doanh và vận hành còn dòng nào vượt trần: …
+- Mã lần chạy grade: `R-S6-grade-20261118-163650-c285d0` · base: `R-S6-before-20261118-163650-c285d0` · prepared: `R-S6-prepared-20261118-163650-c285d0`
+- Cổng vòng 1 đỡ được ô / con số nào (so cột base với cột prepared): Cổng vòng 1 (`legal.carrier_fault_requires_recorded_cause` trong `guards_round1.py`) đã chặn được `15` lỗi ghi oan cho hãng (`wrongful_carrier_faults` giảm từ `40` xuống `25`), nhờ chặn các đơn tách kiện mà kiện đầu (`parcels[0]`) có `delay_cause: null` (`S6-01`, `S6-02`, `S6-03`); đồng thời `pii_leaks` giữ `= 0`. Tuy nhiên, tiền hoàn vẫn bị ghi vào sổ cái trước khi bước `file_carrier_fault` bị escalate, nên `pass_rate` vẫn giữ nguyên `0.3333` và `wrongful_refund_vnd` vẫn ở mức `270.000đ`.
+- Khối kinh doanh và vận hành còn dòng nào vượt trần:
+  - Vượt trần: **`ROI = -0.09`** (lỗ `6.839đ/ngày`, dưới ngưỡng `roi_min = 0.25` đã ký; chi phí/ticket tăng từ `3.162đ` lên `6.070đ` do tỷ lệ chuyển người duyệt tăng lên `0.3333` và kiểm mẫu `10%`).
+  - Các ngưỡng bắt buộc chưa đạt trên `S6 · prepared`: `pass_rate = 0.3333 < 0.92`, `pass^k = 0.3333 < 0.85`, `wrongful_refund_vnd = 270.000đ > 0`, `wrongful_carrier_faults = 25 > 0`. (Kho xấu nhất: `HCM` hoàn sai `270.000đ`, `10` lỗi oan, `pass 0.25`, và `DN` `pass 0.0`, `5` lỗi oan; Hãng xấu nhất: `GHSH` `20` lỗi oan, `130.000đ` hoàn sai, và `DNB` `pass 0.0`, `140.000đ` hoàn sai, `5` lỗi oan).
 
 **Mở lại pre-mortem (Phiếu B mục B6), viết bằng bút khác màu.** Với thẻ S1, S3, S4, S5 đây là một phần của phần riêng theo thẻ.
 
-- Sự cố trên thẻ thuộc lăng kính nào (kỹ thuật, kinh doanh, con người và vận hành, pháp lý)? …
-- Có nằm trong các lý do bàn đã viết không? Nếu có: cổng vòng 1 đã đỡ được bao nhiêu (đọc cột prepared trong report)? Nếu không: vì sao cả bàn không nghĩ tới? …
+- Sự cố trên thẻ thuộc lăng kính nào (kỹ thuật, kinh doanh, con người và vận hành, pháp lý)? Thuộc cả **Kỹ thuật** (mô hình chọn sai kiện `parcels[0]` trong đơn tách kiện; `issue_refund` ghi tiền trước khi kiểm kiện/lỗi), **Con người và vận hành** (mô hình "đơn vị chịu lỗi" của hệ thống là theo *đơn* chứ không theo *kiện* như tài xế/kế toán; vượt ngưỡng lỗi/hãng/ngày), và **Pháp lý** (ghi lỗi oan trừ thưởng chuyên cần của hãng/tài xế vô tội `GHSH`/`DNB`, kéo theo **Kinh doanh** bị `ROI = -0.09`).
+- Có nằm trong các lý do bàn đã viết không? Nếu có: cổng vòng 1 đã đỡ được bao nhiêu (đọc cột prepared trong report)? Nếu không: vì sao cả bàn không nghĩ tới? Ở Phiếu B mục B4 (HAZOP vòng 1), Hồng đã từng nhắc nhánh *"đơn nhiều kiện lấy nhầm `parcels[0]`"* (`INVALID`), nhưng lúc đưa vào B6 (Pre-mortem) và code cổng vòng 1 ở B7.1 thì bàn mới chỉ code kiểm `delay_cause` trống trên `parcel`, **chưa** kiểm tra đối chiếu kiện nào thực sự trễ, chưa chặn trường hợp nhiều kiện cùng trễ không rõ kiện nào, chưa chặn trước bước `issue_refund`, và **chưa** giới hạn số lỗi/hãng/ngày (`max_auto_strikes_per_carrier_per_day = 2`) vì trên bộ nền `base` chưa lộ tình huống `S6-LOAT`.
 - Lý do còn thiếu, thêm bây giờ:
 
 | Lý do thất bại (viết ở thì quá khứ) | Lăng kính | Kiểm được bằng gì (trace / data / config nào) |
 |---|---|---|
-| | | |
+| Hệ thống chọn mặc định `parcels[0]` thay vì kiện thực sự bị trễ hoặc chuyển người khi đơn nhiều kiện cùng trễ mà khách không chỉ rõ kiện, dẫn tới ghi lỗi oan cho hãng giao đúng hẹn và hoàn tiền sai trước khi kiểm lỗi. | Kỹ thuật · Con người và vận hành | Trace `S6-01@11`, `S6-04@11`, `S6-20@11`, `S6-21@11`; `orders[].parcels` trong `world_patch.json`. |
+| Hệ thống tự động ghi liên tiếp quá 2 lỗi/ngày cho cùng một hãng vận chuyển (`GHSH`) mà không dừng chuyển người duyệt, làm hãng nhỏ bị tích dồn strike và trừ thưởng tài xế. | Pháp lý · Vận hành | Trace `S6-40`..`S6-43`; `data/world.json` → `ops_limits.max_auto_strikes_per_carrier_per_day = 2`, `carriers[].suspend_after_strikes_7d = 3`. |
 
 ---
 
