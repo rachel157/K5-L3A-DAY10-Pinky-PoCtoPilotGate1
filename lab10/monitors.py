@@ -19,7 +19,21 @@ def escalation_rate(trials):
     return sum(t["status"] == "escalated" for t in trials) / max(1, len(trials))
 
 
+def multi_parcel_ambiguity_rate(trials):
+    """Tỉ lệ lần chạy có đơn tách kiện (>= 2 kiện) mà có kiện trễ, cần theo dõi rủi ro gán nhầm hãng."""
+    count = 0
+    for t in trials:
+        for e in t.get("events") or []:
+            if e.get("type") == "tracking":
+                parcels = e.get("parcels") or []
+                if len(parcels) > 1 and any((p.get("delay") or 0) > 0 for p in parcels):
+                    count += 1
+                    break
+    return count / max(1, len(trials))
+
+
 MONITORS = {
     "escalation_rate": escalation_rate,     # có sẵn; KHÔNG tính là metric mới của đội
+    "multi_parcel_ambiguity_rate": multi_parcel_ambiguity_rate,
 }
 STARTER_MONITORS = ("escalation_rate",)
