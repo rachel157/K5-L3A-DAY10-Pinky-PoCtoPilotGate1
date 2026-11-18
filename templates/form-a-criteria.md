@@ -48,12 +48,12 @@ trợ lý có đang gây thiệt hại cho bên ngoài LogiX không; không có 
 
 | | Offline, cho MỘT bước (câu 1.3) | Telemetry production (câu 1.4) |
 |---|---|---|
-| **Bước / hành vi được đo** | | |
-| **Thước đo** (một câu, có đơn vị) | | |
-| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | | |
-| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | | |
+| **Bước / hành vi được đo** | Chọn phiên bản chính sách hoàn tiền (`policy`). | |
+| **Thước đo** (một câu, có đơn vị) | Tỉ lệ (%) lần chạy mà chính sách agent chọn (`policy_id`) khác với chính sách còn hiệu lực tại ngày `as_of`. | |
+| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | Sự kiện `type == "policy"` (trường `policy_id`) trong `runs/<mã lần chạy>/traces/` trên toàn bộ bộ nền (`base` × 5 seed), đối chiếu với `policies` và `as_of` trong `data/world.json`; nhãn đúng xác định tự động bằng `effective_policy(policies, as_of)` trong `lab10/helpers.py`. | |
+| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | `(Số lần chạy có event.policy_id != effective_policy.policy_id) / (Tổng số lần chạy có sự kiện type == "policy") × 100%`. Các lần chạy dừng hoặc chuyển người trước bước `policy` bị loại khỏi mẫu số và đếm riêng. | |
 | **Khung thời gian / ngưỡng báo động** | (không áp dụng) | |
-| **Điểm mù** (thước đo này KHÔNG thấy gì) | | |
+| **Điểm mù** (thước đo này KHÔNG thấy gì) | Không thấy trường hợp chính bảng `policies` trong DB bị gán sai ngày hiệu lực (`effective_from`/`effective_to`), và không thấy lỗi tính sai tiền/sai lý do ở các bước sau dù đã chọn đúng `policy_id`. | |
 
 **Ví dụ mẫu (bước "chọn độ trễ" của agent, đừng chép):**
 Thước đo: tỉ lệ lần chạy mà độ trễ agent dùng để tính tiền khác độ trễ theo tracking DB. Dữ liệu: sự kiện `proposal.delay_days_used`
