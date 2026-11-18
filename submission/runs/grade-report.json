@@ -1,13 +1,11 @@
 {
- "run_id": "R-S6-grade-20261118-165821-c73c2a",
+ "run_id": "R-S6-grade-20261118-165301-c73c2a",
  "incident": "S6",
  "grader_version": "lab10-1.0",
  "code_hash": "c73c2ab1d002fb60e3ce5e7a31442c6ff9eb432f2477ebcc037de87443c31aaa",
  "integrity": {
   "ok": false,
   "changed": [
-   "data/tickets.jsonl",
-   "data/world.json",
    "incidents/S1/card.json",
    "incidents/S1/card.md",
    "incidents/S1/tickets.jsonl",
@@ -35,24 +33,7 @@
    "incidents/S8/card.json",
    "incidents/S8/card.md",
    "incidents/S8/tickets.jsonl",
-   "incidents/S8/world_patch.json",
-   "lab10/__init__.py",
-   "lab10/_gradectx.py",
-   "lab10/_noop_guards.py",
-   "lab10/agent.py",
-   "lab10/check_submission.py",
-   "lab10/checkpoint.py",
-   "lab10/criteria.py",
-   "lab10/eval.py",
-   "lab10/gate.py",
-   "lab10/grade.py",
-   "lab10/helpers.py",
-   "lab10/mock_llm.py",
-   "lab10/ops.py",
-   "lab10/tools.py",
-   "lab10/trace.py",
-   "lab10/world.py",
-   "tests/test_public.py"
+   "incidents/S8/world_patch.json"
   ],
   "manifest": "MANIFEST.json"
  },
@@ -1350,9 +1331,9 @@
   }
  },
  "run_ids": {
-  "before": "R-S6-before-20261118-165822-c73c2a",
-  "prepared": "R-S6-prepared-20261118-165822-c73c2a",
-  "after": "R-S6-after-20261118-165822-c73c2a"
+  "before": "R-S6-before-20261118-165302-c73c2a",
+  "prepared": "R-S6-prepared-20261118-165302-c73c2a",
+  "after": "R-S6-after-20261118-165302-c73c2a"
  },
  "visible": {
   "before_red": true,
@@ -1416,5 +1397,5 @@
  "hard_gates_ok": false,
  "score": null,
  "verdict": "FAIL",
- "seconds": 0.452
+ "seconds": 0.729
 }

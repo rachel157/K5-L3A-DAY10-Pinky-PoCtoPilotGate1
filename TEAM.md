@@ -57,15 +57,22 @@ Vai: Kỹ sư cổng; câu 1.3, 1.5, ký tiêu chí A5 (Phiếu A), B0–B2, B7.
 
 ### Đóng góp cụ thể
 
-...
+- Thiết kế offline metric cho bước chọn phiên bản chính sách (`policy`) trong Phiếu A mục A2 (câu `1.3`) và chạy toàn bộ bộ lệnh đánh giá trên Máy Chính (`eval`, `gate`, `trace`, `checkpoint`, `grade`, `check_submission --collect`).
+- Đo baseline (`R-base-before-20261118-155149-38ff67`), phân tích trace `T-002@55` phát hiện 2 lỗi chìm (`model_override` tin số ngày khách khai đè lên tracking DB và `notify_carrier` gửi kèm `customer_note`), điền B0–B2.
+- Cài đặt 3 cổng vòng 1 trong `lab10/guards.py` (`write_gate`): chặn `model_override` khi `ticket != db`, xóa trường PII trong `notify_carrier` bằng `Verdict.modify`, kiểm tra `daily_refund_cap_vnd` và `delay_cause` trước khi ghi lỗi hãng; kiểm tra 2 ticket `--adhoc` (B7.3) và chốt mốc `prepared` (`72be7f09`).
+- Phân tích sự cố `S6` qua trace (`S6-01`, `S6-04`, `S6-21`, `S6-42`), bổ sung `_analyze_parcels` & `_will_file_fault` trong `lab10/guards.py` để sửa đúng kiện khi 1 kiện trễ (`Verdict.modify`), `escalate` trước `issue_refund` khi >1 kiện trễ hoặc vượt trần `2` lỗi/hãng/ngày; thêm monitor `multi_parcel_ambiguity_rate` trong `lab10/monitors.py`.
+- Có sử dụng trợ lý AI hỗ trợ kiểm tra log, rà soát edge-case regression (`T-001@55` khi `ticket == db`) và chuẩn hóa mã nguồn cổng vòng 1–2.
 
 ### Bằng chứng
 
-Mã commit, mã lần chạy (`runs/<mã>`), dòng trong phiếu.
+- Commits: `fa8f242` (Phiếu A câu `1.3`), `3fcdd39` (Phiếu B `B0–B2`), `c26327f` (cổng vòng 1 `guards.py`, chốt `prepared` `72be7f09`, B6/B7.1–B7.3/B8), `395d34a` (vòng 2 `S6` `guards.py`, `monitors.py`, Phiếu C `C0/C2/C7/C8`).
+- Mã lần chạy: `R-base-before-20261118-155149-38ff67` (base), `R-base-prepared-20261118-162136-c285d0` (prepared), `R-S6-after-20261118-165200-c73c2a` (`S6 · after`), `R-base-after-20261118-165201-c73c2a` (`base · after`), `R-S6-grade-20261118-165301-c73c2a` (`grade S6`).
+- Mục phiếu: Phiếu A (`A2` câu `1.3`), Phiếu B (`B0–B2`, `B6` nhánh Kỹ thuật, `B7.1–B7.3`, `B8` phần kỹ thuật), Phiếu C (`C0`, `C2`, `C7`, `C8`).
 
 ### Exit ticket
 
-Một điều học được, một điều còn chưa chắc.
+- **Điều học được:** Cổng kiểm soát (`write_gate`) phải đặt trước lệnh ghi đầu tiên (`issue_refund`) và kiểm tra điều kiện đủ chặt (`ticket != db` thay vì chặn mọi `model_override`) — chỉ một thay đổi thứ tự hoặc điều kiện biên có thể quyết định giữa làm hỏng ca đúng (`T-001@55`) với việc vừa sạch lỗi vừa không regression.
+- **Điều còn chưa chắc:** Trên bộ test ẩn có trường hợp nào `do_fault == False` nhưng đơn vẫn tách kiện cần `escalate`, hoặc nhiều đơn cùng hãng dồn vào giờ cao điểm làm `escalation_rate` (`0.3333`) gây quá tải cho 1 người duyệt hay không — cần theo dõi `multi_parcel_ambiguity_rate` và thời gian chờ thực tế ở pilot.
 
 ## ChuMaiHong-2A202603377
 
