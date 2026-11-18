@@ -71,16 +71,23 @@ Một điều học được, một điều còn chưa chắc.
 
 ### Phần việc phụ trách
 
-Vai: Vận hành và pháp lý; câu 1.2, 1.4 (Phiếu A), B4–B5, B7.5–B7.6 (Phiếu B), C3–C4, C5 (3.3), C9–C11 (Phiếu C); `config/operating_gates.json` mục `operations` & `legal`, `submission/submission.json`.
+Vai: Vận hành và pháp lý; câu 1.2, 1.4 (Phiếu A), B4–B5, B6 (vận hành & pháp lý), B7.5–B7.6 (Phiếu B), C3.2, C4, C5 (3.3), C9–C11 (Phiếu C); `config/operating_gates.json` mục `operations` & `legal`, `submission/submission.json`.
 
 ### Đóng góp cụ thể
 
-...
+- Thiết kế mục tiêu từ góc nhìn kế toán đối soát (`NV-OANH`) & trưởng ca CSKH (`NV-HANH`) và thiết kế bảng Telemetry production không cần nhãn trong Phiếu A (câu `1.2`, `1.4`).
+- Thực hiện HAZOP vòng 1 trên `file_carrier_fault` (đủ 5 guideword + 2 dòng ngoài kỹ thuật về người duyệt và dữ liệu gửi bên thứ ba), phân PIC và điền Checklist go-live 9 nhóm việc lần 1 (B4–B5), đóng góp nhánh Con người/Vận hành và Pháp lý trong Pre-mortem (B6).
+- Thiết lập toàn bộ cổng `operations` (`pic: NV-TUNG`, `approver_id: NV-HANH`, `1` người trực, `6` ca/giờ, SLA `60` phút, `decision_note: true`, `review_sampling_pct: 10%`, 4 `stop_conditions`) và `legal` (`pii_fields_blocked_to_third_party`, `carrier_fault_requires_recorded_cause: true`) trong `config/operating_gates.json`, kèm Runbook 1–3 và kịch bản Giờ cao điểm (B7.5–B7.6).
+- Phân tích sự cố `S6` ở phần riêng `C3.2` (đối chiếu hình dung theo *kiện* của hãng/kế toán với hình dung theo *đơn* của hệ thống), HAZOP riêng cho thẻ `S6` (C4), giả định môi trường (C5.3.3), cập nhật Fault tree sau sửa (C9), Risk register (C10), Checklist & Runbook phần 4–5 (C11) và chuẩn bị thông tin `submission/submission.json`.
+- Có sử dụng trợ lý AI để rà soát sự nhất quán giữa Runbook 4–5, Fault tree sau sửa, Risk register với các thay đổi code ở Vòng 2.
 
 ### Bằng chứng
 
-Mã commit, mã lần chạy (`runs/<mã>`), dòng trong phiếu.
+- Commits: `9d915e0` (Phiếu A `1.2/1.4`, Phiếu B `B4–B7.6`, `config/operating_gates.json`), `be2bcae` (Phiếu C `C3.2`, `C4`, `C5.3.3`), `1d86d36` (Phiếu C `C9–C11` & bản chuẩn bị `submission.json`).
+- Mã lần chạy đối chiếu: `R-base-prepared-20261118-162136-c285d0` (v1), `R-S6-after-20261118-165200-c73c2a` & `R-S6-grade-20261118-165301-c73c2a` (v2).
+- Mục phiếu: Phiếu A (`A1.2`, `A2`), Phiếu B (`B4`, `B5`, `B6`, `B7.5`, `B7.6`), Phiếu C (`C3.2`, `C4`, `C5.3.3`, `C9`, `C10`, `C11`).
 
 ### Exit ticket
 
-Một điều học được, một điều còn chưa chắc.
+- **Điều học được:** Một hệ thống AI có thể vượt mọi bài kiểm tra định dạng kỹ thuật nhưng vẫn gây thiệt hại cho đối tác ngoài công ty (như `GHSH`, `DNB` bị trừ thưởng oan ở `S6`) nếu đơn vị chịu trách nhiệm của hệ thống (*cả đơn / `parcels[0]`*) vênh với đơn vị đối soát thực tế của con người (*từng `parcel_id`*), hoặc thiếu cơ chế giới hạn số lỗi/hãng/ngày (`max_auto_strikes_per_carrier_per_day = 2`).
+- **Điều còn chưa chắc:** Với tỉ lệ chuyển người duyệt `0.3333` trên phân khúc tách kiện như `S6`, công suất `1` người trực (`6` ca/giờ) sẽ chịu tải thế nào khi lượng đơn tách kiện tăng đột biến vào ngày sale hoặc khi chính sách `REFUND-v4` có hiệu lực từ `2026-12-01` — cần theo dõi sát ngưỡng vàng `wait_max > 45` phút và `multi_parcel_ambiguity_rate > 0.15` trong tuần đầu pilot.
