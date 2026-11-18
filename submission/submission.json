@@ -7,10 +7,10 @@
   ],
   "incident": "S6",
   "decision_v1": "Tiếp tục",
-  "decision_v2": "",
+  "decision_v2": "Tiếp tục",
   "three_lines": {
-    "environment_assumption": "",
-    "reduce_or_prevent": "",
-    "measure_in_pilot": ""
+    "environment_assumption": "Người thiết kế ngầm giả định mỗi đơn hàng chỉ gồm một kiện do một hãng giao (hoặc khách luôn ghi rõ mã kiện parcel_id bị trễ), tracking DB luôn cập nhật chính xác ngày giao và nguyên nhân trễ cho từng kiện, và lưu lượng ca tách kiện chuyển người duyệt không dồn vượt công suất 6 ca/giờ của 1 người trực.",
+    "reduce_or_prevent": "Cổng vòng 2 của đội NGĂN hẳn lỗi hoàn tiền sai (270.000đ → 0đ) và ghi lỗi oan cho hãng (40 → 0) trong phạm vi dữ liệu tracking DB chuẩn xác — nhờ chọn đúng kiện trễ qua _analyze_parcels, chặn trước issue_refund khi >1 kiện trễ mơ hồ và chặn vượt quá 2 lỗi/hãng/ngày; tuy nhiên cổng chỉ GIẢM khả năng rủi ro nếu bản thân tracking DB bị nhập sai từ điểm phát.",
+    "measure_in_pilot": "Trong tuần đầu pilot thật trước Bước đánh giá 2 (2026-11-30), cần đo lại tỉ lệ đơn tách kiện thực tế qua monitor multi_parcel_ambiguity_rate (mục tiêu < 0.30), tỉ lệ chuyển người thực tế (escalation_rate), thời gian chờ duyệt tối đa (<= 60 phút với 1 người trực), chi phí mỗi ticket & ROI thật (đặc biệt ở kho thiếu mã và phân khúc tách kiện), và số lần hãng khiếu nại lại trong đối soát tuần của NV-OANH."
   }
 }
