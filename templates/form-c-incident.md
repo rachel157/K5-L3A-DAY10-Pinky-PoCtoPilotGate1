@@ -163,19 +163,19 @@ duyệt, chờ duyệt, trần).
 **Cách làm:** thảo luận theo nhóm rồi ghi cho **từng nhóm người dùng**: họ là ai, mục tiêu chính là gì, và hiện
 nay họ làm việc này **từng bước ra sao**, đồng đều hay mỗi nơi một kiểu. Dòng cuối: **hệ thống đang mang hình dung nào**, đọc từ trace.
 
-| | Nhóm A: `__________` (gợi ý: điều phối / tài xế của hãng) | Nhóm B: `__________` (gợi ý: kế toán đối soát hoặc CSKH) |
+| | Nhóm A: Điều phối / tài xế của hãng vận chuyển (`GHSH`, `TX-GHSH-04`) | Nhóm B: Kế toán đối soát (`NV-OANH`) và CSKH duyệt (`NV-HANH`) |
 |---|---|---|
-| Họ là ai, chạm vào kết quả của trợ lý ở đâu | | |
-| Mục tiêu chính của họ | | |
-| Hiện nay họ xác định "ai chịu lỗi giao trễ" theo các bước nào | | |
-| Cách làm đó đồng đều hay mỗi nơi một kiểu | | |
-| Theo hình dung của họ, **đơn vị chịu lỗi** là gì (đơn / kiện / chặng / tài xế)? | | |
+| Họ là ai, chạm vào kết quả của trợ lý ở đâu | Đối tác giao từng kiện (`parcels[]`); nhận `notify_carrier` và bị trừ thưởng chuyên cần/tính strike từ bảng `faults` của LogiX. | `NV-OANH` đối soát lỗi hãng & sổ hoàn tiền cuối tuần; `NV-HANH` duyệt các ca bị chuyển người (`escalated`) và xử lý khiếu nại từ hãng nhỏ. |
+| Mục tiêu chính của họ | Chỉ chịu lỗi khi **chính kiện mình giao** thật sự trễ do lỗi hãng; không bị trừ thưởng oan vì kiện khác trong đơn tách kiện. | Khớp sổ lỗi & tiền hoàn 100% theo chứng từ từng kiện trong tracking DB; không phát sinh tranh chấp từ đối tác và không để quá ngưỡng lỗi/ngày. |
+| Hiện nay họ xác định "ai chịu lỗi giao trễ" theo các bước nào | (1) Tra đúng `parcel_id` mình thực nhận (`O-2601-P1`, `O-2604-P1`...); (2) So `delivered_date` vs `promised_date` của riêng kiện đó; (3) Kiểm `delay_cause` có phải `CARRIER` và tổng strike trong ngày. | (1) Kiểm tra đơn có bao nhiêu kiện trong `orders[].parcels`; (2) Xác định kiện nào khách khiếu nại / kiện nào trễ thực sự; (3) Nếu nhiều kiện cùng trễ mà khách không chỉ rõ kiện nào → dừng hỏi lại; (4) Kiểm hạn mức `max_auto_strikes_per_carrier_per_day = 2`. |
+| Cách làm đó đồng đều hay mỗi nơi một kiểu | Đồng đều giữa các hãng đối tác: luôn đối soát theo từng mã kiện (`parcel_id`) thực tế vận chuyển. | Đồng đều theo quy trình đối soát chuẩn LogiX và bảng `ops_limits` (`2` lỗi tự động/hãng/ngày). |
+| Theo hình dung của họ, **đơn vị chịu lỗi** là gì (đơn / kiện / chặng / tài xế)? | **Từng kiện hàng (`parcel_id` / tài xế phụ trách kiện đó)**, không phải cả đơn hàng (`order_id`). | **Từng kiện hàng cụ thể (`parcel_id`)** có bằng chứng giao trễ thuộc lỗi hãng. |
 
 **Hệ thống đang mang hình dung nào?** (đọc trace một ticket hỏng: `tracking.parcels` so với dòng `file_carrier_fault`)
 
-- Với hệ thống, đơn vị chịu lỗi là: `__________`. Bằng chứng: ticket `______@seed ____`, dòng trace: `__________`.
-- Chỗ hai hình dung vênh nhau: `__________`.
-- Khi đầu vào không đủ để áp hình dung của con người (không biết kiện nào), hệ thống đang làm gì: `__________`; nên làm gì: `__________`.
+- Với hệ thống, đơn vị chịu lỗi là: **Cả đơn hàng (`order_id`) rồi gán mặc định lên kiện đầu tiên (`parcels[0]`)**. Bằng chứng: ticket `S6-04@11`, dòng trace `02 tracking {"db_delay_days": 5, "cause": "FORCE_MAJEURE", "parcels": [{"parcel_id": "O-2604-P1", "carrier_id": "GHSH", "delay": 1}, {"parcel_id": "O-2604-P2", "carrier_id": "VNX", "delay": 5}]}` → `06 tool file_carrier_fault {"parcel_id": "O-2604-P1", "carrier_id": "GHSH", "delay_days": 5}` *(lấy độ trễ 5 ngày của `P2`/`VNX` gán sang `P1`/`GHSH`)*. Tương tự ở `S6-01@11`, hệ thống cũng lấy `O-2601-P1` (`GHSH`, trễ `0` ngày) thay vì `O-2601-P2` (`VNX`, trễ `4` ngày).
+- Chỗ hai hình dung vênh nhau: Con người phân định trách nhiệm theo **từng kiện (`parcel_id`) thực sự trễ do lỗi hãng**, còn hệ thống gộp mức trễ lớn nhất toàn đơn áp lên `parcels[0]`, chạy `issue_refund` trước khi kiểm kiện, và không giới hạn số lỗi tự động/hãng/ngày (`max_auto_strikes_per_carrier_per_day = 2`).
+- Khi đầu vào không đủ để áp hình dung của con người (không biết kiện nào), hệ thống đang làm gì: **Tự đoán mặc định lấy `parcels[0]` để hoàn tiền (`270.000đ` ở `S6-20@11`, `S6-21@11`) và ghi lỗi oan cho `GHSH`/`DNB`**; nên làm gì: **Dừng TRƯỚC bước `issue_refund` và `file_carrier_fault` để chuyển sang người duyệt (`Verdict.escalate`), tuyệt đối không đoán mò kiện chịu lỗi.**
 
 → Mỗi chỗ vênh là một nhánh của fault tree. Gate tốt làm cho hệ thống hành xử theo hình dung của người chịu hậu quả.
 
@@ -234,13 +234,14 @@ Mở lại Phiếu B mục B3. Ghi ở đây những dòng đổi so với vòng
 
 *Mục riêng, không ghi đè HAZOP vòng 1 ở Phiếu B mục B4. Năm guideword và nghĩa của chúng: xem Phiếu B mục B4.*
 
-Tool chọn phân tích: `________________`
+Tool chọn phân tích: `file_carrier_fault` *(xét kèm ảnh hưởng của `issue_refund` chạy ngay trước đó)*
 
 | Tham số / dòng dữ liệu | Guideword (WRONG / INVALID / INCOMPLETE / PERTURBED / INCAPABLE) | Lệch cụ thể (mã ticket, trường dữ liệu của thẻ) | Hậu quả, cho ai | Hiện có gì ngăn? | Gate đề xuất + tầng |
 |---|---|---|---|---|---|
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| `parcel_id` / `carrier_id` | WRONG | `S6-01@11` (`O-2601`), `S6-04@11` (`O-2604`): hệ thống lấy `parcels[0]` (`GHSH`, trễ `0` hoặc `1` ngày) thay vì kiện trễ chính `P2` (`VNX`, trễ `4`–`5` ngày). | Hãng `GHSH` và tài xế giao đúng hẹn bị ghi lỗi oan, bị trừ thưởng chuyên cần; `S6-01..03` còn bị ghi hoàn tiền vào sổ cái trước khi bị chặn. | Cổng vòng 1 mới kiểm `delay_cause` trống trên `parcel` chứ chưa đối chiếu đúng kiện trễ và chạy sau `issue_refund`. | Sửa/chặn trong `guards.py` (`write_gate` kiểm đúng kiện trễ hoặc khớp `ticket.parcel_id`, áp dụng cả trước `issue_refund`, tầng chặn). |
+| `ticket.parcel_id` / thông tin xác định kiện | INCOMPLETE | `S6-20@11` (`O-2620`), `S6-21@11` (`O-2621`): đơn tách 2 kiện đều trễ (`P1` và `P2`), nội dung ticket chỉ ghi *"Đơn của tôi giao chậm"* và thiếu `parcel_id`. | Hoàn tiền sai (`270.000đ` toàn bộ `S6`), ghi lỗi oan cho `GHSH`/`DNB` và làm `ROI = -0.09`. | Chưa có cổng kiểm tra mơ hồ khi nhiều kiện cùng trễ. | Chặn ở `pre_guard` hoặc `write_gate` **trước** `issue_refund`: nếu có `> 1` kiện trễ mà không xác định được 1 kiện duy nhất → `Verdict.escalate` (tầng chặn). |
+| `carrier_id` + số lỗi trong ngày | INVALID | `S6-42@11` (`O-2642`), `S6-43@11` (`O-2643`): cùng hãng `GHSH` bị ghi lỗi thứ 3 và thứ 4 trong cùng ngày, vượt `ops_limits.max_auto_strikes_per_carrier_per_day = 2`. | Hãng nhỏ `GHSH` (12 tài xế, ngưỡng đình chỉ `3` strikes/7 ngày) bị dồn lỗi tự động vượt trần mà không qua người duyệt. | Chưa có cổng đếm `ctx.tools.fault_rows(carrier_id=...)` theo ngày. | Kiểm `fault_rows` trong `write_gate` (`file_carrier_fault`): vượt `max_auto_strikes_per_carrier_per_day` (`2`) → `Verdict.deny` hoặc `escalate` (tầng giới hạn thiệt hại). |
+| `parcels[].status` / `LLM` *(nhánh chưa thấy trên trace)* | INCAPABLE | Đơn tách kiện có 1 kiện đang `IN_TRANSIT` (`delivered_date: null`), hoặc khi LLM trích xuất nhầm trong lúc quá tải không phân tách được kiện nào trễ. | Tính sai số ngày trễ hoặc bỏ sót kiện đang kẹt, gây trả lời sai cho khách hàng. | Chưa có nhánh kiểm kiện `IN_TRANSIT` trên đơn tách kiện. | Chặn trước `issue_refund` / `file_carrier_fault`: nếu đơn tách kiện có kiện chưa giao hoặc trạng thái không rõ → chuyển người duyệt; gắn monitor theo dõi (tầng phát hiện + vận hành). |
 
 Bắt buộc: ít nhất ba dòng, trong đó **một dòng là nhánh bàn chưa thấy trên trace** lúc viết.
 
@@ -258,9 +259,9 @@ Kiểm bằng gì (hàm trong `guards.py`, dòng report nào): …
 
 ### Câu 3.3 · Một giả định về môi trường mà người thiết kế đã ngầm tin, nhưng nhiều khả năng sai ngoài thực tế
 
-Giả định (thứ nằm NGOÀI phần mềm): …
+Giả định (thứ nằm NGOÀI phần mềm): Người thiết kế ngầm giả định rằng mỗi đơn hàng chỉ giao trong một kiện thuộc một hãng vận chuyển duy nhất (hoặc nếu tách kiện thì khách hàng luôn biết và ghi rõ mã kiện bị trễ trong khiếu nại), và mọi hãng đối tác đều chịu được việc bị ghi lỗi tự động liên tiếp không giới hạn trong một ngày.
 
-Vì sao có thể sai: …
+Vì sao có thể sai: Ngoài thực tế thương mại điện tử, một đơn thường tách thành 2–3 kiện cho nhiều hãng khác nhau giao (`O-2601`, `O-2603`, `O-2620`); khách hàng chỉ thấy *"đơn chậm"* chứ không biết mã `parcel_id` từng chặng; còn các hãng nhỏ như `GHSH` (12 tài xế, đình chỉ sau `3` lỗi/7 ngày) sẽ bị trừ thưởng tài xế hoặc đình chỉ oan nếu nhận dồn `3–4` lỗi tự động trong một ngày mà không có người kiểm lại.
 
 ---
 
