@@ -1,8 +1,12 @@
 {
-  "team": "",
-  "members": [],
-  "incident": "",
-  "decision_v1": "",
+  "team": "K5-L3A-DAY10-Pinky-PoCtoPilotGate1",
+  "members": [
+    "PhamVietHung-2A202603370",
+    "PhamNguyenVu-2A202603436",
+    "ChuMaiHong-2A202603377"
+  ],
+  "incident": "S6",
+  "decision_v1": "Tiếp tục",
   "decision_v2": "",
   "three_lines": {
     "environment_assumption": "",

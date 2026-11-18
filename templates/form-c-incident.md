@@ -347,23 +347,23 @@ Thẻ S5 dùng mục này cho một con số kinh doanh: chi phí mỗi ticket t
 
 <a id="c9"></a>
 
-## C9 · Câu 3.7 · Fault tree SAU khi sửa (mã lần chạy: `__________`)
+## C9 · Câu 3.7 · Fault tree SAU khi sửa (mã lần chạy: `R-S6-after-20261118-165200-c73c2a` / `R-S6-grade-20261118-165301-c73c2a`)
 
 Vẽ lại cây ở C6. Ở mỗi nhánh đã xử lý, thêm một nút `VÀ [gate … hỏng]` và ghi:
 
 ```
-[ĐỈNH] ______________________________
+[ĐỈNH] Hãng vận chuyển (GHSH, DNB) bị ghi lỗi oan & trừ thưởng chuyên cần; LogiX chi hoàn sai
  └─ HOẶC
- ├─ [1] ______________ VÀ [gate ______ hỏng]
- ├─ [2] ______________ VÀ [gate ______ hỏng]
- └─ [3] ______________ (còn hở?)
+ ├─ [1] Chọn nhầm `parcels[0]` khi ghi lỗi ở đơn tách kiện (S6-01, S6-04) VÀ [gate `_analyze_parcels` + `Verdict.modify` trong `write_gate(file_carrier_fault)` hỏng]
+ ├─ [2] Tự động hoàn tiền và ghi lỗi khi nhiều kiện cùng trễ thiếu `parcel_id` (S6-20, S6-21) VÀ [gate `write_gate(issue_refund)` kiểm `_will_file_fault` & `len(late_parcels) > 1` → `escalate` hỏng]
+ └─ [3] Tự động ghi vượt quá 2 lỗi/hãng/ngày (S6-42, S6-43) VÀ [gate kiểm `fault_rows(carrier_id)` >= `max_auto_strikes_per_carrier_per_day` → `escalate` hỏng]
 ```
 
 | Nhánh | Gate (hàm trong `guards.py` / khoá config / metric trong `monitors.py`) | Tầng gate (phát hiện / chặn / giới hạn thiệt hại / vận hành) | Giảm hay ngăn? Vì sao | Nhánh còn hở |
 |---|---|---|---|---|
-| [1] | | | | |
-| [2] | | | | |
-| [3] | | | | |
+| [1] | `lab10/guards.py`: `write_gate` nhánh `file_carrier_fault` (`_analyze_parcels` + `Verdict.modify` đổi sang đúng kiện trễ) + monitor `multi_parcel_ambiguity_rate` (`monitors.py`) | Chặn (+ phát hiện qua monitor) | **NGĂN hẳn** gán nhầm lỗi sang `parcels[0]` khi đơn tách kiện chỉ có 1 kiện trễ (vì đối chiếu `db_delay_days >= min_days_fee` trên từng kiện trong tracking DB). | Còn hở nếu chính dữ liệu `delivered_date`/`delay_cause` trong tracking DB bị điểm phát nhập sai hoặc thiếu. |
+| [2] | `lab10/guards.py`: `write_gate` nhánh `issue_refund` kiểm `_will_file_fault(ctx)` & `len(late_parcels) > 1` → `Verdict.escalate` | Chặn (trước lệnh ghi đầu tiên) | **NGĂN hẳn** việc tự động hoàn sai (`270.000đ`) và ghi lỗi oan khi nhiều kiện cùng trễ không rõ kiện nào, vì dừng trước khi `issue_refund` ghi sổ cái. | Còn hở nếu có ca tách kiện nhưng proposal có `do_fault = false`, hoặc khi nhiều ca chuyển người dồn giờ cao điểm làm tăng hàng chờ (`escalation_rate = 0.3333`). |
+| [3] | `lab10/guards.py`: `write_gate` kiểm `len(fault_rows(carrier_id=...)) >= ops_limits().max_auto_strikes_per_carrier_per_day` (`2`) → `Verdict.escalate` | Giới hạn thiệt hại & vận hành | **NGĂN hẳn** trợ lý tự động ghi quá `2` lỗi/hãng/ngày; từ lỗi thứ 3 chuyển sang `NV-HANH` kiểm tra trước khi quyết định. | Còn hở nếu người duyệt tay xử lý tiếp mà không đối chiếu cộng dồn strike 7 ngày (`suspend_after_strikes_7d = 3`), hoặc giới hạn `2` lỗi/ngày chưa tách theo quy mô từng hãng. |
 
 ---
 
@@ -373,7 +373,8 @@ Vẽ lại cây ở C6. Ở mỗi nhánh đã xử lý, thêm một nút `VÀ [g
 
 | Rủi ro | Khả năng | Tác động | Người phụ trách (PIC, một người) | Dấu hiệu (metric nào, ngưỡng nào) | Xử lý | Ảnh hưởng bước đánh giá | Nhóm chức năng (GOVERN / MAP / MEASURE / MANAGE) |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
+| Đơn tách nhiều kiện làm tăng tỉ lệ chuyển người (`escalation_rate = 0.3333 > 0.25` trên `S6`) và dễ gây ùn hàng chờ duyệt ở giờ cao điểm | Trung bình | Cao | Chu Mai Hồng | `multi_parcel_ambiguity_rate > 0.30` (`monitors.py`) hoặc `escalation_rate > 0.25` kèm `queue_wait_max_min > 45` phút (report) | `NV-TUNG` gọi thêm 1 người duyệt hỗ trợ `NV-HANH`; nếu chi phí > `7.500đ/ticket` hoặc vẫn ùn thì thu hẹp `business.pilot_scope` khỏi phân khúc tách kiện nhiều. | Nếu `queue_stuck > 0` hoặc `cost_per_ticket_vnd > 7500` thì không chọn `Tiếp tục` ở Gate 1/Gate 2 mà chuyển sang `Thu hẹp`. | MANAGE |
+| Tracking DB cập nhật sai hoặc trễ `delivered_date`/`delay_cause` giữa các kiện khiến cổng tự động gắn lỗi nhầm kiện hoặc bỏ sót lỗi hãng | Thấp | Cao | Phạm Việt Hưng | `wrongful_carrier_faults > 0` (report) hoặc khiếu nại đối soát tuần từ hãng/tài xế qua `NV-OANH` | Tạm tắt `file_carrier_fault` trong `config/switches.json` trong `15` phút, `NV-OANH` đối chiếu tracking từng kiện với hãng đối tác trước khi ghi lại strike. | Nếu phát hiện `wrongful_carrier_faults > 0` trên dữ liệu thật thì `Dừng` ghi lỗi tự động và quay lại `Cải tiến thêm`. | MEASURE |
 
 Quy tắc: **mỗi dòng phải đổi được một quyết định.** Cột "Dấu hiệu" phải là một metric có trong `monitors.py` hoặc trong report.
 
@@ -389,26 +390,29 @@ Ghi các dòng đổi sau sự cố. Mỗi dòng vẫn phải có một PIC có 
 
 | # nhóm | Trạng thái mới (Xong / Chưa / Không áp dụng) | Bằng chứng mới (mã lần chạy, mục phiếu, số trong report) | PIC |
 |---|---|---|---|
-| | | | |
-| | | | |
+| 1 | Xong | `R-S6-after-20261118-165200-c73c2a` & `R-S6-grade-20261118-165301-c73c2a`: `visible ✅` (`60/60`, `0đ` hoàn sai, `0` lỗi oan), `regression ✅` (`base 110/110`, `13/13` unit tests `OK`). | Phạm Nguyên Vũ |
+| 4 | Xong | `lab10/guards.py` vòng 2: chặn trước `issue_refund` khi `>1` kiện trễ, giới hạn `max_auto_strikes_per_carrier_per_day = 2`, sửa đúng `parcel_id` bằng `Verdict.modify`. | Phạm Nguyên Vũ |
+| 6 | Xong | `R-S6-grade-20261118-165301-c73c2a`: trên `S6 after`, `cost_per_ticket = 6.862đ ≤ 7.500đ`, `ROI = 0.46 ≥ 0.25` (khắc phục `ROI = -0.09` ở mốc `prepared`). | Phạm Việt Hưng |
+| 7 | Xong | Thêm monitor mới `multi_parcel_ambiguity_rate` (`monitors.py`: `0.0455` trên `base` → `0.5833` trên `S6`, `monitor ✅`), cập nhật Risk register C10 và Runbook 4–5. | Chu Mai Hồng |
+| 8 | Xong | `S6 after` đạt `0` lỗi oan hãng (`GHSH`, `DNB`), `0` PII leak; cập nhật quy trình đối chiếu kiện & thông báo hãng ở Runbook 4. | Chu Mai Hồng |
 
 ### Runbook 4 · Sau sự cố trên thẻ (vòng 2)
 
 | Câu hỏi | Trả lời |
 |---|---|
-| Tín hiệu nào ở Runbook 2 (Phiếu B mục B7.5) lẽ ra phải báo trước sự cố này? Nó đã có chưa? | |
-| Bàn thêm hoặc đổi ngưỡng nào, từ bao nhiêu thành bao nhiêu? | |
-| Bàn đổi gì về **người** (số người trực, ai đứng tên, ai được gọi)? | |
-| Bàn đổi gì về **phạm vi** hoặc **quy trình** (kiểm mẫu, ghi chú giải thích, trần)? | |
-| Nói gì với bên thứ ba bị ảnh hưởng (hãng, shop, người nhận, nhân viên duyệt), ai nói, trong bao lâu? | |
-| Dữ liệu cá nhân nào đã rời hệ thống mà không thu hồi được? Báo cho ai? | |
-| Sự cố lộ ra trước qua số máy đo, phản hồi của người, hay đọc nội dung? Nguồn nào bàn chưa có? | |
+| Tín hiệu nào ở Runbook 2 (Phiếu B mục B7.5) lẽ ra phải báo trước sự cố này? Nó đã có chưa? | Runbook 2 đã có tín hiệu `Lỗi ghi oan cho hãng (wrongful_carrier_faults)` và `ROI/chi phí mỗi ticket`, nhưng đó là tín hiệu hậu kiểm cần nhãn; bàn **chưa có** tín hiệu cảnh báo sớm không cần nhãn về tỉ trọng đơn tách nhiều kiện (`multi_parcel_ambiguity_rate`) và bộ đếm số lỗi/hãng/ngày trước khi chạm ngưỡng. |
+| Bàn thêm hoặc đổi ngưỡng nào, từ bao nhiêu thành bao nhiêu? | Giữ nguyên ngưỡng nhân sự & SLA trong `config/operating_gates.json` (`1` người trực, `6` ca/giờ, SLA `60` phút, kiểm mẫu `10%`, `decision_note: true`, `carrier_fault_requires_recorded_cause: true`), bổ sung trần code `max_auto_strikes_per_carrier_per_day = 2` trong `guards.py` và thêm monitor `multi_parcel_ambiguity_rate` (`monitors.py`: vàng `> 0.15`, đỏ `> 0.30`). |
+| Bàn đổi gì về **người** (số người trực, ai đứng tên, ai được gọi)? | Giữ `reviewers_on_shift = 1` (`NV-HANH` đứng tên duyệt) vì trên `S6 after` hàng chờ vẫn `0.0` phút (`queue_stuck = 0`); nhưng bổ sung quy tắc: khi `multi_parcel_ambiguity_rate > 0.30` hoặc `escalation_rate > 0.25` kèm chờ `> 45` phút, `NV-TUNG` gọi thêm 1 người trực dự phòng hỗ trợ `NV-HANH`. |
+| Bàn đổi gì về **phạm vi** hoặc **quy trình** (kiểm mẫu, ghi chú giải thích, trần)? | Giữ `pilot_scope: all`, `decision_note: true`, `review_sampling_pct: 10%`; bổ sung quy trình cho người duyệt khi nhận ca tách kiện bị escalate hoặc vượt `2` lỗi/hãng/ngày phải kiểm từng `parcel_id` trong tracking DB và xác minh với khách trước khi ghi hoàn tiền/lỗi hãng. |
+| Nói gì với bên thứ ba bị ảnh hưởng (hãng, shop, người nhận, nhân viên duyệt), ai nói, trong bao lâu? | `NV-OANH` (kế toán đối soát) và phòng Đối tác liên hệ trực tiếp trưởng nhóm/điều phối hãng `GHSH` và `DNB` trong vòng **24 giờ** để xin lỗi, gửi bảng rà soát các đơn tách kiện (`O-2601`, `O-2604`, `O-2620`, `O-2621`, `O-2642`, `O-2643`), gỡ các strike ghi oan và hoàn trả thưởng chuyên cần bị trừ nhầm; đồng thời thông báo quy trình mới cho `NV-HANH`. |
+| Dữ liệu cá nhân nào đã rời hệ thống mà không thu hồi được? Báo cho ai? | Trên `S6` ở cả ba mốc (`base`, `prepared`, `after`), `pii_leaks = 0` nhờ cổng lọc `notify_carrier` gỡ bỏ `customer_note` và `recipient_contact`; không có dữ liệu cá nhân nào rời hệ thống cần báo thu hồi. |
+| Sự cố lộ ra trước qua số máy đo, phản hồi của người, hay đọc nội dung? Nguồn nào bàn chưa có? | Lộ ra trước qua **phản hồi từ bên ngoài** (tin nhắn thoại của trưởng nhóm tài xế `GHSH` gửi phòng Đối tác vì bị trừ thưởng), trước khi máy đo nội bộ kịp báo do thiếu monitor theo dõi đơn tách kiện (`multi_parcel_ambiguity_rate`, nay đã bổ sung) và thiếu bộ đếm lỗi theo hãng trong ngày. |
 
 ### Runbook 5 · Ba kịch bản "nếu … thì …" cho tuần đầu chạy thử thật
 
-1. Nếu số ticket tăng gấp ___ lần trong một giờ thì: …
-2. Nếu nhà cung cấp LLM lỗi quá ___ phút thì: …
-3. Nếu người duyệt báo không tin một quyết định của trợ lý thì: …
+1. Nếu số ticket tăng gấp `3` lần trong một giờ thì: `NV-TUNG` theo dõi `queue_wait_max_min` và `multi_parcel_ambiguity_rate`; nếu chờ lâu nhất vượt `45` phút thì gọi thêm 1 người trực hỗ trợ `NV-HANH` (với điều kiện `cost_per_ticket <= 7.500đ` và `ROI >= 0.25`); nếu chờ vượt `60` phút hoặc `queue_stuck > 0` thì thu hẹp `business.pilot_scope` sang kho ít tách kiện hoặc giảm `percent` xuống `50%` trong `15` phút.
+2. Nếu nhà cung cấp LLM lỗi quá `5` phút thì: `NV-TUNG` thông báo kênh `ops-pilot-gate1`, chuyển các công tắc ghi (`issue_refund`, `file_carrier_fault`, `notify_carrier`) trong `config/switches.json` sang `off`, đưa ticket phát sinh vào hàng chờ xử lý tay của `NV-HANH` và chỉ bật lại khi LLM ổn định liên tục `10` phút.
+3. Nếu người duyệt báo không tin một quyết định của trợ lý thì: `NV-TUNG` và `NV-HANH` kiểm tra `decision_note` của ca đó, tạm nâng `operations.review_sampling_pct` từ `10%` lên `100%` trên phân khúc liên quan để Kỹ sư cổng kiểm trace; nếu xác nhận có `wrongful_refund_vnd > 0` hoặc `wrongful_carrier_faults > 0` thì tắt ngay thao tác ghi tương ứng trong `15` phút và chuyển `NV-OANH` đối soát.
 
 ---
 
