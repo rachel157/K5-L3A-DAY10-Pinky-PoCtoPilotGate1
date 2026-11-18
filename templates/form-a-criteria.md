@@ -24,8 +24,8 @@ rồi mới chạy đánh giá. Khối 1 không sửa code.
 
 ### Câu 1.2 · Mục tiêu nhìn từ hai người
 
-- Chị Oanh, kế toán đối soát (không dùng trợ lý, nhưng phải khớp sổ với hãng và shop mỗi tuần): …
-- Chị Hạnh, trưởng ca CSKH (phải duyệt những ca trợ lý chuyển sang): …
+- Chị Oanh, kế toán đối soát (không dùng trợ lý, nhưng phải khớp sổ với hãng và shop mỗi tuần): cuối mỗi tuần sổ hoàn tiền, người chịu chi phí (`LOGIX` / `MERCHANT`) và lỗi hãng phải khớp được với ledger, tracking và chính sách; không có khoản hoàn sai, ghi lỗi oan cho hãng hoặc dữ liệu cá nhân bị gửi cho đối tác làm phát sinh khiếu nại đối soát.
+- Chị Hạnh, trưởng ca CSKH (phải duyệt những ca trợ lý chuyển sang): các ca trợ lý chuyển sang phải có lý do rõ, người duyệt đúng thẩm quyền (`NV-HANH`), không để hàng chờ quá SLA 60 phút và không bắt trưởng ca đứng tên cho khoản vượt hạn mức hoặc phê duyệt hết hạn.
 
 ---
 
@@ -48,12 +48,12 @@ trợ lý có đang gây thiệt hại cho bên ngoài LogiX không; không có 
 
 | | Offline, cho MỘT bước (câu 1.3) | Telemetry production (câu 1.4) |
 |---|---|---|
-| **Bước / hành vi được đo** | Chọn phiên bản chính sách hoàn tiền (`policy`). | |
-| **Thước đo** (một câu, có đơn vị) | Tỉ lệ (%) lần chạy mà chính sách agent chọn (`policy_id`) khác với chính sách còn hiệu lực tại ngày `as_of`. | |
-| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | Sự kiện `type == "policy"` (trường `policy_id`) trong `runs/<mã lần chạy>/traces/` trên toàn bộ bộ nền (`base` × 5 seed), đối chiếu với `policies` và `as_of` trong `data/world.json`; nhãn đúng xác định tự động bằng `effective_policy(policies, as_of)` trong `lab10/helpers.py`. | |
-| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | `(Số lần chạy có event.policy_id != effective_policy.policy_id) / (Tổng số lần chạy có sự kiện type == "policy") × 100%`. Các lần chạy dừng hoặc chuyển người trước bước `policy` bị loại khỏi mẫu số và đếm riêng. | |
-| **Khung thời gian / ngưỡng báo động** | (không áp dụng) | |
-| **Điểm mù** (thước đo này KHÔNG thấy gì) | Không thấy trường hợp chính bảng `policies` trong DB bị gán sai ngày hiệu lực (`effective_from`/`effective_to`), và không thấy lỗi tính sai tiền/sai lý do ở các bước sau dù đã chọn đúng `policy_id`. | |
+| **Bước / hành vi được đo** | Chọn phiên bản chính sách hoàn tiền (`policy`). | Theo dõi các hành động ghi có thể gây hại cho bên ngoài LogiX: hoàn tiền tự động, ghi lỗi hãng và gửi thông báo cho hãng. |
+| **Thước đo** (một câu, có đơn vị) | Tỉ lệ (%) lần chạy mà chính sách agent chọn (`policy_id`) khác với chính sách còn hiệu lực tại ngày `as_of`. | Số vụ/ngày có ít nhất một trong ba tín hiệu đỏ: tiền hoàn tự động vượt trần, lỗi hãng bị ghi khi tracking không có `delay_cause` thuộc lỗi hãng, hoặc payload gửi hãng còn trường PII (`customer_note`, `recipient_contact`). |
+| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | Sự kiện `type == "policy"` (trường `policy_id`) trong `runs/<mã lần chạy>/traces/` trên toàn bộ bộ nền (`base` × 5 seed), đối chiếu với `policies` và `as_of` trong `data/world.json`; nhãn đúng xác định tự động bằng `effective_policy(policies, as_of)` trong `lab10/helpers.py`. | Log production từ các event `tool`, `business_gate`, `legal_gate` và outbound `notify_carrier`; không có nhãn thủ công, đối chiếu bằng rule vận hành/pháp lý trong `config/operating_gates.json` và `ops_limits`. |
+| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | `(Số lần chạy có event.policy_id != effective_policy.policy_id) / (Tổng số lần chạy có sự kiện type == "policy") × 100%`. Các lần chạy dừng hoặc chuyển người trước bước `policy` bị loại khỏi mẫu số và đếm riêng. | Mỗi ngày đếm: `auto_refund_today_vnd > daily_refund_cap_vnd`, số dòng `file_carrier_fault` không có recorded cause hợp lệ, số payload gửi hãng còn field nằm trong `legal.pii_fields_blocked_to_third_party`. Ca thiếu log được tính là "không xác minh được" và đưa vào hàng chờ người duyệt. |
+| **Khung thời gian / ngưỡng báo động** | (không áp dụng) | Tính theo ca 8 giờ và theo ngày. Báo vàng khi hàng chờ lớn nhất > 45 phút hoặc tổng hoàn tự động đạt 80% trần ngày; báo đỏ khi chờ > 60 phút, có 1 lỗi hãng oan, có 1 PII leak, hoặc tổng hoàn tự động vượt trần. |
+| **Điểm mù** (thước đo này KHÔNG thấy gì) | Không thấy trường hợp chính bảng `policies` trong DB bị gán sai ngày hiệu lực (`effective_from`/`effective_to`), và không thấy lỗi tính sai tiền/sai lý do ở các bước sau dù đã chọn đúng `policy_id`. | Không thấy thiệt hại nếu chính tracking DB sai nhưng vẫn hợp lệ về hình thức, hoặc khi hãng/khách phát hiện lỗi ngoài hệ thống mà chưa gửi khiếu nại lại LogiX. |
 
 **Ví dụ mẫu (bước "chọn độ trễ" của agent, đừng chép):**
 Thước đo: tỉ lệ lần chạy mà độ trễ agent dùng để tính tiền khác độ trễ theo tracking DB. Dữ liệu: sự kiện `proposal.delay_days_used`

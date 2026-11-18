@@ -7,18 +7,23 @@
     "roi_min": null
   },
   "operations": {
-    "pic": "",
-    "approver_id": "",
+    "pic": "NV-TUNG",
+    "approver_id": "NV-HANH",
     "reviewers_on_shift": 1,
-    "review_capacity_per_hour": null,
-    "max_queue_wait_minutes": null,
-    "stop_conditions": [],
-    "alert_channel": "",
-    "decision_note": false,
-    "review_sampling_pct": 0
+    "review_capacity_per_hour": 6,
+    "max_queue_wait_minutes": 60,
+    "stop_conditions": [
+      "Khi co 1 loi ghi oan cho hang thi tat file_carrier_fault va chuyen nguoi duyet",
+      "Khi phat hien PII leak trong notify_carrier thi tat notify_carrier va bao NV-TUNG",
+      "Khi hang cho nguoi duyet vuot 60 phut thi thu hep pilot_scope hoac goi them nguoi duyet",
+      "Khi wrongful_refund_vnd > 0 hoac vuot tran hoan tu dong thi tam dung issue_refund tu dong"
+    ],
+    "alert_channel": "ops-pilot-gate1",
+    "decision_note": true,
+    "review_sampling_pct": 10
   },
   "legal": {
-    "pii_fields_blocked_to_third_party": [],
-    "carrier_fault_requires_recorded_cause": false
+    "pii_fields_blocked_to_third_party": ["customer_note", "recipient_contact"],
+    "carrier_fault_requires_recorded_cause": true
   }
 }
